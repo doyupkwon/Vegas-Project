@@ -1,0 +1,176 @@
+import mysql.connector
+import pandas as pd
+import ast
+import numpy as np
+import torch
+
+#device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # Check if a GPU is present
+print(device)
+print(torch.cuda.get_device_name(0))
+print(device)
+
+
+mydb = mysql.connector.connect(
+  host="10.18.16.100",
+  user="jmc",
+  database = "NDEX_RealTime_2022",
+  password="jmc"
+)
+
+mydb2 = mysql.connector.connect(
+  host="10.18.16.100",
+  user="jmc",
+  database = "NDEX_RealTime_2022",
+  password="jmc"
+)
+
+mydb3 = mysql.connector.connect(
+  host="10.18.16.100",
+  user="jmc",
+  database = "NDEX_RealTime_2022",
+  password="jmc"
+)
+mydb4 = mysql.connector.connect(
+  host="10.18.16.100",
+  user="jmc",
+  database = "NDEX_RealTime_2022",
+  password="jmc"
+)
+
+
+special = "'(),"
+
+cursor4=mydb4.cursor()
+cursor3=mydb3.cursor()
+cursor2=mydb2.cursor()
+cursor=mydb.cursor()
+
+cursor.execute("SELECT table_name FROM information_schema.tables")
+cursor3.execute("SELECT detector_id FROM detectors WHERE longitude BETWEEN -115323207 AND -115132290 AND latitude BETWEEN 36072634 AND 36164820 AND detector_name LIKE 'I-15 NB%';")
+cursor4.execute("SELECT table_name FROM information_schema.tables")
+
+
+
+special1="d_(),''"
+special2 ="(),''"
+data = np.empty((1,8), int)
+y = 1
+
+
+table_names1 = []
+table_names2 = []
+table_names3 = []
+
+detectors=[]
+
+for detector_id in cursor3:
+
+
+    for spec1 in special1:
+        detector_id = str(detector_id).replace(spec1, "")
+    detector_id = str(detector_id[:-1])
+    if detector_id not in detectors:
+        detectors.append(detector_id)
+
+print(detectors)
+
+
+for table_name in cursor:
+
+    for spec in special1:
+
+        table_name = str(table_name).replace(spec, "")
+
+    table_names1.append(table_name)
+
+print(len(table_names1))
+
+for table_name in cursor4:
+    for spec1 in special2:
+
+        table_name = str(table_name).replace(spec1, "")
+
+    table_names2.append(table_name)
+
+for table in table_names2:
+
+    table_names3.append(table)
+
+print(len(table_names3))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+table_unq=[]
+
+
+for x in range(len(detectors)):
+    for y in range(len(table_names1)):
+        if detectors[x] == table_names1[y]:
+            table = table_names3[y]
+            if table not in table_unq:
+                table_unq.append(table)
+
+
+
+
+
+
+        #temp = "SELECT %s.lane, %s.vehicle_count" % list1[x] % list1[x]
+                temp = f"SELECT {table}.lane, {table}.vehicle_count, {table}.index_date, {table}.occupancy, {table}.vehicle_speed, dates.date_time, dates.date_index FROM dates INNER JOIN {table} ON {table}.index_date = dates.date_index"
+
+
+
+
+                table_name_data = pd.read_sql_query(temp, mydb2)
+
+                if np.size(table_name_data)!=0:
+
+                    d = np.full((table_name_data.shape[0], 1), y)
+                    print(y)
+                    table_name_data = np.hstack((table_name_data,d))
+                    print(table_names3[y])
+                    print(np.size(table_name_data))
+
+                    data = np.concatenate((data, table_name_data))
+                    y+=1
+
+
+
+
+
+
+
+
+
+
+data = data[1:]
+
+data1 = np.delete(data, np.where((data[:, 0] == 'agg'))[0], axis=0)
+
+
+#data2 = data1[np.where(data1[:,2]%5 == 0)]
+
+US95Data = pd.DataFrame(data1)
+
+US95Data.to_csv("/home/dkwon/I15_NB_1Minute.csv", index=False)
